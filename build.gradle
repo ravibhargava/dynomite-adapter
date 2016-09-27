@@ -1,0 +1,54 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+
+sourceCompatibility = 1.7
+version = '1.0'
+
+test {
+	useJUnit {
+		excludeCategories 'com.thomsonreuters.dynomite.client.test.IntegrationTest'
+	}
+}
+
+task integrationTest(type: Test) {
+	useJUnit {
+		includeCategories 'com.thomsonreuters.dynomite.client.test.IntegrationTest'
+	}
+}
+
+eclipse {
+	classpath {
+		downloadSources = true
+	}
+}
+
+repositories {
+	maven {
+		url 'https://dl.bintray.com/palantir/releases'
+	}
+	mavenCentral()
+}
+
+dependencies {
+    compile group: 'commons-collections', name: 'commons-collections', version: '3.2'
+    compile group: 'org.apache.spark', name: 'spark-core_2.10', version: '1.3.1'
+    compile group: 'org.apache.spark', name: 'spark-sql_2.10', version: '1.3.1'
+    compile group: 'org.apache.spark', name: 'spark-hive_2.10', version: '1.3.1'
+    compile group: 'org.apache.spark', name: 'spark-streaming_2.10', version: '1.3.1'
+    compile group: 'org.apache.spark', name: 'spark-streaming-kafka_2.10', version: '1.3.1'
+    compile group: 'org.apache.spark', name: 'spark-mllib_2.10', version: '1.3.1'
+    compile group: 'com.netflix.dyno', name: 'dyno-jedis', version: '1.4.6'
+	compile group: 'biz.paluch.redis',   name: 'lettuce',  version: "3.4.3.Final"
+  	compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.2'
+  	testCompile group: 'junit', name: 'junit', version: '4.11'
+	testCompile group: 'com.palantir.docker.compose', name: 'docker-compose-rule', version: '0.9.0'
+    
+}
+
+test {
+    systemProperties 'property': 'value'
+}
+
+task wrapper(type: Wrapper) {
+	gradleVersion = '2.2'
+}
