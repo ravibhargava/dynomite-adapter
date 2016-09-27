@@ -36,7 +36,5 @@ public interface Adapter {
 	
 	public void toDynomiteSET(JavaRDD<String> listRDD, String listName);
 	
-	public void addlist(final String key, JavaRDD<String> list);
-	
 	public void toDynomiteDataFrame(final String key, DataFrame dataframe) throws Exception;
 }
