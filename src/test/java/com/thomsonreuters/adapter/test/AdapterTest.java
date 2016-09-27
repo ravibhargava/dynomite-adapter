@@ -40,9 +40,9 @@ public class AdapterTest implements Serializable{
 		try {
 			final String key = UUID.randomUUID().toString();
 			JavaRDD<String> rdd = sc.parallelize(Arrays.asList("1", "2", "3", "4"));
-			AdapterImpl w = new AdapterImpl();
+			AdapterImpl w = new AdapterImpl(sc);
 			w.addlist(key, rdd);
-			List<String> list = w.getlist(key);
+			JavaRDD<String> list = w.fromDynomiteList(key);
 		}
 		catch (Exception e){
 			e.printStackTrace();
@@ -53,7 +53,7 @@ public class AdapterTest implements Serializable{
 		final String key = UUID.randomUUID().toString();
 	    SQLContext sqlCtx = new SQLContext(sc);
 	    DataFrame dataframe = sqlCtx.jsonFile("src/test/resources/dataframe.json");
-	    AdapterImpl w = new AdapterImpl();
-	    w.addDataFrame(key, dataframe);
+	    AdapterImpl w = new AdapterImpl(sc);
+	    w.toDynomiteDataFrame(key, dataframe);
 	}
 }

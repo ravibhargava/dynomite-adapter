@@ -3,10 +3,13 @@ package com.thomsonreuters.adapter.impl;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.sql.DataFrame;
 import org.apache.spark.sql.Row;
@@ -22,19 +25,42 @@ import com.thomsonreuters.dynomite.client.types.sync.DynomiteList;
 public class AdapterImpl implements Serializable{
 
 	private SerializableWrapper client = null;
-	public AdapterImpl() {
+	private transient JavaSparkContext sc;
+	public AdapterImpl(final JavaSparkContext sc) {
 		client = new SerializableWrapper() {
 		    public DynomiteClient getClient() {
 		        return DynomiteClientFactory.getClient();
 		    }
 		};
+		this.sc = sc;
 	}
 	
-	public JavaRDD<String> fromDynomiteKV(String key) {
+	public void putString(final String key, String string){	
+		client.getClient().put(key, string);
+	}
+	
+	public JavaRDD<String> fromDynomiteList(final String key){	
+		DynomiteList dlist = client.getClient().list(key);
+		List<String> jlist = new ArrayList<String>();
+		for (int i=0; i<dlist.size();i++) {
+			jlist.add(dlist.get(i));
+		}
+		JavaRDD<String> rdd = sc.parallelize(jlist);
+		return rdd;
+	}
+	
+	public JavaRDD<String> fromDynomiteKey(String key) {
 		return null;
 	}
 	
-	public JavaRDD<String> fromDynomiteKV(String[] key) {
+	public JavaRDD<String> fromDynomiteKey(String[] key) {
+		return null;
+	}
+	public JavaPairRDD<String, String> fromDynomiteKV(String key) {
+		return null;
+	}
+	
+	public JavaPairRDD<String, String> fromDynomiteKV(String[] key) {
 		return null;
 	}
 
@@ -43,14 +69,6 @@ public class AdapterImpl implements Serializable{
 	}
 	
 	public JavaRDD<String> fromDynomiteHash(String[] key) {
-		return null;
-	}
-	
-	public void putString(final String key, String string){	
-		client.getClient().put(key, string);
-	}
-	
-	public JavaRDD<String> fromDynomiteList(String key) {
 		return null;
 	}
 	
@@ -66,7 +84,7 @@ public class AdapterImpl implements Serializable{
 		return null;
 	}
 
-	public void toDynomiteKV(JavaRDD<String> stringRDD) {}
+	public void toDynomiteKV(JavaPairRDD<String, String> stringRDD) {}
 	
 	public void toDynomiteHASH(JavaRDD<String> hashRDD, String hashName) {}
 	
@@ -84,16 +102,9 @@ public class AdapterImpl implements Serializable{
 	    }});
 	}
 	
-	public List<String> getlist(final String key){	
-		DynomiteList dlist = client.getClient().list(key);
-		List<String> jlist = new ArrayList<String>();
-		for (int i=0; i<dlist.size();i++) {
-			jlist.add(dlist.get(i));
-		}
-		return jlist;
-	}
+
 	
-	public void addDataFrame(final String key, DataFrame dataframe) throws Exception {
+	public void toDynomiteDataFrame(final String key, DataFrame dataframe) throws Exception {
 		StructType type= dataframe.schema();
 		final StructField[] fields = type.fields();
 		final List<String> columns = new ArrayList<String>();
