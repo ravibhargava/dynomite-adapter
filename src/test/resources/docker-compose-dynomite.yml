@@ -1,0 +1,5 @@
+dynomite:
+  image: 155508938372.dkr.ecr.us-east-1.amazonaws.com/dynomite:0.5.6-3.x
+  ports:
+    - "8102:8102"
+
