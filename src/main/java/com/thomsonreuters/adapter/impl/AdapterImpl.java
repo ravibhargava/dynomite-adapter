@@ -18,11 +18,12 @@ import org.apache.spark.sql.types.StructType;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.thomsonreuters.adapter.Adapter;
 import com.thomsonreuters.dynomite.client.DynomiteClient;
 import com.thomsonreuters.dynomite.client.DynomiteClientFactory;
 import com.thomsonreuters.dynomite.client.types.sync.DynomiteList;
 
-public class AdapterImpl implements Serializable{
+public class AdapterImpl implements Serializable, Adapter{
 
 	private SerializableWrapper client = null;
 	private transient JavaSparkContext sc;
@@ -146,10 +147,10 @@ public class AdapterImpl implements Serializable{
 			}});
 	}
 	
-	public DataFrame getDataframe(String key) throws JsonParseException, JsonMappingException, IOException {
+	@Override
+	public DataFrame fromDynomiteDataFrame(String key) throws Exception {
 		DataFrameMetadata dataFrameMetadata = DataFrameMetadata.getMetadata(key);
 		return null;
-		
 	}
 
 }
