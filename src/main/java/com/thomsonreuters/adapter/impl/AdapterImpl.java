@@ -39,16 +39,6 @@ public class AdapterImpl implements Serializable{
 		client.getClient().put(key, string);
 	}
 	
-	public JavaRDD<String> fromDynomiteList(final String key){	
-		DynomiteList dlist = client.getClient().list(key);
-		List<String> jlist = new ArrayList<String>();
-		for (int i=0; i<dlist.size();i++) {
-			jlist.add(dlist.get(i));
-		}
-		JavaRDD<String> rdd = sc.parallelize(jlist);
-		return rdd;
-	}
-	
 	public JavaRDD<String> fromDynomiteKey(String key) {
 		return null;
 	}
@@ -70,6 +60,16 @@ public class AdapterImpl implements Serializable{
 	
 	public JavaRDD<String> fromDynomiteHash(String[] key) {
 		return null;
+	}
+	
+	public JavaRDD<String> fromDynomiteList(final String key){	
+		DynomiteList dlist = client.getClient().list(key);
+		List<String> jlist = new ArrayList<String>();
+		for (int i=0; i<dlist.size();i++) {
+			jlist.add(dlist.get(i));
+		}
+		JavaRDD<String> rdd = sc.parallelize(jlist);
+		return rdd;
 	}
 	
 	public JavaRDD<String> fromDynomiteList(String key[]) {
