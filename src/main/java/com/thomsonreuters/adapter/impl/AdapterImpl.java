@@ -30,9 +30,49 @@ public class AdapterImpl implements Serializable{
 		};
 	}
 	
+	public JavaRDD<String> fromDynomiteKV(String key) {
+		return null;
+	}
+	
+	public JavaRDD<String> fromDynomiteKV(String[] key) {
+		return null;
+	}
+
+	public JavaRDD<String> fromDynomiteHash(String key) {
+		return null;
+	}
+	
+	public JavaRDD<String> fromDynomiteHash(String[] key) {
+		return null;
+	}
+	
 	public void putString(final String key, String string){	
 		client.getClient().put(key, string);
 	}
+	
+	public JavaRDD<String> fromDynomiteList(String key) {
+		return null;
+	}
+	
+	public JavaRDD<String> fromDynomiteList(String key[]) {
+		return null;
+	}
+	
+	public JavaRDD<String> fromDynomiteSet(String key) {
+		return null;
+	}
+	
+	public JavaRDD<String> fromDynomiteSet(String key[]) {
+		return null;
+	}
+
+	public void toDynomiteKV(JavaRDD<String> stringRDD) {}
+	
+	public void toDynomiteHASH(JavaRDD<String> hashRDD, String hashName) {}
+	
+	public void toDynomiteLIST(JavaRDD<String> listRDD, String listName) {}
+	
+	public void toDynomiteSET(JavaRDD<String> listRDD, String listName) {}
 	
 	public void addlist(final String key, JavaRDD<String> list){	
 		list.foreachPartition(new VoidFunction<Iterator<String>>(){
