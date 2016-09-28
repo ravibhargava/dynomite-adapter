@@ -55,11 +55,11 @@ public class AdapterImpl implements Serializable, Adapter{
 		return null;
 	}
 
-	public JavaRDD<String> fromDynomiteHash(String key) {
+	public JavaPairRDD<String, String> fromDynomiteHash(String key) {
 		return null;
 	}
 	
-	public JavaRDD<String> fromDynomiteHash(String[] key) {
+	public JavaPairRDD<String, String> fromDynomiteHash(String[] key) {
 		return null;
 	}
 	
@@ -84,10 +84,16 @@ public class AdapterImpl implements Serializable, Adapter{
 	public JavaRDD<String> fromDynomiteSet(String key[]) {
 		return null;
 	}
+	
+	@Override
+	public DataFrame fromDynomiteDataFrame(String key) throws Exception {
+		DataFrameMetadata dataFrameMetadata = DataFrameMetadata.getMetadata(key);
+		return null;
+	}
 
 	public void toDynomiteKV(JavaPairRDD<String, String> stringRDD) {}
 	
-	public void toDynomiteHASH(JavaRDD<String> hashRDD, String hashName) {}
+	public void toDynomiteHASH(JavaPairRDD<String, String> hashRDD, String hashName) {}
 	
 	public void toDynomiteLIST(JavaRDD<String> listRDD, String listName) {}
 	
@@ -105,7 +111,7 @@ public class AdapterImpl implements Serializable, Adapter{
 	
 
 	
-	public void toDynomiteDataFrame(final String key, DataFrame dataframe) throws Exception {
+	public void toDynomiteDataFrame(DataFrame dataframe, final String key) throws Exception {
 		StructType type= dataframe.schema();
 		final StructField[] fields = type.fields();
 		final List<String> columns = new ArrayList<String>();
@@ -146,11 +152,4 @@ public class AdapterImpl implements Serializable, Adapter{
 				metadata.save();	
 			}});
 	}
-	
-	@Override
-	public DataFrame fromDynomiteDataFrame(String key) throws Exception {
-		DataFrameMetadata dataFrameMetadata = DataFrameMetadata.getMetadata(key);
-		return null;
-	}
-
 }
