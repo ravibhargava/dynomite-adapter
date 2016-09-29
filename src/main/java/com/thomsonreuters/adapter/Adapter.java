@@ -1,5 +1,7 @@
 package com.thomsonreuters.adapter;
 
+import java.util.Map;
+
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.DataFrame;
@@ -7,7 +9,7 @@ import org.apache.spark.sql.DataFrame;
 public interface Adapter {
 	
 	/**
-	 * Returns the keys JavaRDD<String> by retrieving the key names from Dynomite that match the 
+	 * Returns the JavaRDD<String> by retrieving the names from Dynomite that match the 
 	 * key.
 	 * @param key
 	 * @return JavaRDD<String>
@@ -15,7 +17,7 @@ public interface Adapter {
 	public JavaRDD<String> fromDynomiteKey(String key);
 	
 	/**
-	 * Returns the keys JavaRDD<String> by retrieving the key names from Dynomite that match the 
+	 * Returns the JavaRDD<String> by retrieving the names from Dynomite that match the 
 	 * keys listed in an Array.
 	 * @param key[]
 	 * @return JavaRDD<String>
@@ -30,7 +32,7 @@ public interface Adapter {
 	 * @return JavaPairRDD<String, String>
 	 */
 	
-	public JavaPairRDD<String, String> fromDynomiteKV(String key);
+	public JavaPairRDD<String, Map<String, String>> fromDynomiteKV(String key);
 
 	/**
 	 * Returns the JavaPairRDD<String, String> that contains the string values of all keys whose names 
