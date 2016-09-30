@@ -36,13 +36,16 @@ public class AdapterTest implements Serializable{
 		}
 	}
 	@Test
-	public void testClient() {
+	public void testList() {
 		try {
 			final String key = UUID.randomUUID().toString();
 			JavaRDD<String> rdd = sc.parallelize(Arrays.asList("1", "2", "3", "4"));
 			AdapterImpl w = new AdapterImpl(sc);
 			w.addlist(key, rdd);
 			JavaRDD<String> list = w.fromDynomiteList(key);
+			List<String> strings = list.collect();
+			for (String string:strings)
+			System.out.println("**************"+string);
 		}
 		catch (Exception e){
 			e.printStackTrace();

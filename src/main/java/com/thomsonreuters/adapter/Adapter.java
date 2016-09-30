@@ -17,15 +17,6 @@ public interface Adapter {
 	public JavaRDD<String> fromDynomiteKey(String key);
 	
 	/**
-	 * Returns the JavaRDD<String> by retrieving the names from Dynomite that match the 
-	 * keys listed in an Array.
-	 * @param key[]
-	 * @return JavaRDD<String>
-	 */
-
-	public JavaRDD<String> fromDynomiteKey(String[] key);
-	
-	/**
 	 * Returns the JavaPairRDD<String, String> that contains the string values of all keys whose names 
 	 * match key. 
 	 * @param key
@@ -35,30 +26,12 @@ public interface Adapter {
 	public JavaPairRDD<String, Map<String, String>> fromDynomiteKV(String key);
 
 	/**
-	 * Returns the JavaPairRDD<String, String> that contains the string values of all keys whose names 
-	 * match an array of keys.
-	 * @param key
-	 * @return JavaPairRDD<String, String>
-	 */
-
-	public JavaPairRDD<String, String> fromDynomiteKV(String[] key);
-
-	/**
 	 * Returns the JavaPairRDD<String, String> with the fields and values of the hashName.
 	 * @param key
 	 * @return JavaPairRDD<String, String>
 	 */
 	
-	public JavaPairRDD<String, String> fromDynomiteHash(String hashName);
-	
-	/**
-	 * Returns the JavaPairRDD<String, String> with the fields and values of the hashes' names are 
-	 * provided in an array.
-	 * @param key
-	 * @return JavaPairRDD<String, String>
-	 */
-	
-	public JavaPairRDD<String, String> fromDynomiteHash(String[] key);
+	public JavaPairRDD<String, Map<String,String>> fromDynomiteHash(String hashName);
 	
 	/**
 	 * Returns the contents (members) of the Dynomite Lists whose name is equal to listName.
@@ -69,27 +42,12 @@ public interface Adapter {
 	public JavaRDD<String> fromDynomiteList(final String listName);
 	
 	/**
-	 * Returns the contents (members) of the Dynomite Lists whose names are in the array.
-	 * @param key
-	 * @return JavaRDD<String>
-	 */
-
-	public JavaRDD<String> fromDynomiteList(String key[]);
-	
-	/**
 	 * Returns the Dynomite Sets' members whose name is 'setName'.
 	 * @param key
 	 * @return JavaRDD<String>
 	 */
 	
 	public JavaRDD<String> fromDynomiteSet(String setName);
-	
-	/**
-	 * Returns the Dynomite Sets' members whose names are in the array.
-	 * @param key
-	 * @return JavaRDD<String>
-	 */
-	public JavaRDD<String> fromDynomiteSet(String key[]);
 	
 	/**
 	 * Returns the Dynomite Dataframe for the key.
@@ -135,3 +93,43 @@ public interface Adapter {
 	 */
 	public void toDynomiteDataFrame(DataFrame dataframe, final String dataName) throws Exception;
 }
+
+///**
+// * Returns the JavaPairRDD<String, String> that contains the string values of all keys whose names 
+// * match an array of keys.
+// * @param key
+// * @return JavaPairRDD<String, String>
+// */
+//
+//public JavaPairRDD<String, String> fromDynomiteKV(String[] key);
+//
+///**
+// * Returns the JavaPairRDD<String, String> with the fields and values of the hashes' names are 
+// * provided in an array.
+// * @param key
+// * @return JavaPairRDD<String, String>
+// */
+//
+////public JavaPairRDD<String, Map<String,String>> fromDynomiteHash(String[] key);
+//
+///**
+// * Returns the contents (members) of the Dynomite Lists whose names are in the array.
+// * @param key
+// * @return JavaRDD<String>
+// */
+//
+////public JavaRDD<String> fromDynomiteList(String key[]);
+///**
+// * Returns the Dynomite Sets' members whose names are in the array.
+// * @param key
+// * @return JavaRDD<String>
+// */
+////public JavaRDD<String> fromDynomiteSet(String key[]);
+///**
+// * Returns the JavaRDD<String> by retrieving the names from Dynomite that match the 
+// * keys listed in an Array.
+// * @param key[]
+// * @return JavaRDD<String>
+// */
+//
+////public JavaRDD<String> fromDynomiteKey(String[] key);
