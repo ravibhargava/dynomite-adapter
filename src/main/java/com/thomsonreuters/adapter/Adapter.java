@@ -31,7 +31,7 @@ public interface Adapter {
 	 * @return JavaPairRDD<String, String>
 	 */
 	
-	public JavaPairRDD<String, Map<String,String>> fromDynomiteHash(String hashName);
+	public JavaPairRDD<String, Map<String,String>> fromDynomiteHash(String hashName); 
 	
 	/**
 	 * Returns the contents (members) of the Dynomite Lists whose name is equal to listName.
