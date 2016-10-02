@@ -2,6 +2,7 @@ package com.thomsonreuters.adapter.impl;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -29,6 +30,7 @@ import scala.Tuple2;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thomsonreuters.adapter.Adapter;
 import com.thomsonreuters.dynomite.client.DynomiteClient;
 import com.thomsonreuters.dynomite.client.DynomiteClientFactory;
@@ -48,6 +50,7 @@ public class AdapterImpl implements Serializable, Adapter{
 		    }
 		};
 		this.sc = sc;
+		this.sqlcontext = new SQLContext(this.sc);
 	}
 	
 	public JavaRDD<String> fromDynomiteKey(String key) {
@@ -111,58 +114,60 @@ public class AdapterImpl implements Serializable, Adapter{
 	
 	@Override
 	public DataFrame fromDynomiteDataFrame(String key) throws Exception {
-		DataFrameMetadata dataFrameMetadata = DataFrameMetadata.getMetadata(key);
-		long num_rows = dataFrameMetadata.getNum_rows();
-		List<String> cols = dataFrameMetadata.getColumns();
-		List<String> types = dataFrameMetadata.getTypes();
+		ObjectMapper mapper = new ObjectMapper();
+		String metadata = client.getClient().get(key+":metadata");
+		DataFrameMetadata df = mapper.readValue(metadata, DataFrameMetadata.class);
+		long num_rows = df.getNum_rows();
+		List<String> cols = df.getColumns();
+		List<String> types = df.getTypes();
 		String value = null;
-		DataTypes dataTypes = null;
 		DataType dataType = null;
 		Row row = RowFactory.create();
 		List<Row> table = new ArrayList<Row>();
 		List<String> line = new ArrayList<String>();
 		List<StructField> rows = new ArrayList<StructField>();
-		
 		for (long i=0;i<num_rows;i++) {
 			int index = (int)i;
 			for (int k=0; k<cols.size();k++) {
 				String metaKey = key+":"+cols.get(k)+":"+index; 
-				if (types.get(k).equals(DataTypes.BooleanType)) {
+				System.out.println("READ: metaKey="+metaKey+" types="+types.get(k));
+				if (types.get(k).equals(DataTypes.BinaryType.simpleString())) {
+					dataType = DataTypes.BinaryType;
+				}
+				else if (types.get(k).equals(DataTypes.BooleanType.simpleString())) {
 					dataType = DataTypes.BooleanType;
 				}
-				else if (types.get(k).equals(DataTypes.ByteType)) {
+				else if (types.get(k).equals(DataTypes.ByteType.simpleString())) {
 					dataType = DataTypes.ByteType;
 				}
-				else if (types.get(k).equals(DataTypes.DateType)) {
+				else if (types.get(k).equals(DataTypes.DateType.simpleString())) {
 					dataType = DataTypes.DateType;
 				}
-				else if (types.get(k).equals(DataTypes.DateType)) {
-					dataType = DataTypes.DateType;
-				}
-				else if (types.get(k).equals(DataTypes.StringType)) {
+				else if (types.get(k).equals(DataTypes.StringType.simpleString())) {
 					dataType = DataTypes.StringType;
 				}
-				else if (types.get(k).equals(DataTypes.DoubleType)) {
+				else if (types.get(k).equals(DataTypes.DoubleType.simpleString())) {
 					dataType = DataTypes.DoubleType;
 				}
-				else if (types.get(k).equals(DataTypes.FloatType)) {
+				else if (types.get(k).equals(DataTypes.FloatType.simpleString())) {
 					dataType = DataTypes.FloatType;
 				}
-				else if (types.get(k).equals(DataTypes.IntegerType)) {
+				else if (types.get(k).equals(DataTypes.IntegerType.simpleString())) {
 					dataType = DataTypes.IntegerType;
 				}
-				else if (types.get(k).equals(DataTypes.LongType)) {
+				else if (types.get(k).equals(DataTypes.LongType.simpleString())) {
 					dataType = DataTypes.LongType;
 				}
-				else if (types.get(k).equals(DataTypes.ShortType)) {
+				else if (types.get(k).equals(DataTypes.ShortType.simpleString())) {
 					dataType = DataTypes.ShortType;;
 				}
-				else if (types.get(k).equals(DataTypes.TimestampType)) {
+				else if (types.get(k).equals(DataTypes.TimestampType.simpleString())) {
 					dataType = DataTypes.TimestampType;
 					break;
 				}
 				rows.add(DataTypes.createStructField(cols.get(k), dataType, true));
 				value = client.getClient().get(metaKey);
+				System.out.println("from metaKeyvalue ="+value);
 				line.add(value);
 			}
 			row = RowFactory.create(line);
@@ -170,8 +175,8 @@ public class AdapterImpl implements Serializable, Adapter{
 		}
 		StructType schema = DataTypes.createStructType(rows);
 		JavaRDD<Row> rdd = sc.parallelize(table);
-		DataFrame df = sqlcontext.createDataFrame(rdd, schema);				
-		return df;
+		DataFrame dataframe = sqlcontext.createDataFrame(rdd, schema);				
+		return dataframe;
 	}
 
 	public void toDynomiteKV(JavaPairRDD<String, String> stringRDD) {
@@ -250,49 +255,61 @@ public class AdapterImpl implements Serializable, Adapter{
 					for (int index=0;index<row.size();index++) {
 						String name = fields[index].name();
 						DataType type = fields[index].dataType();
-						String metaKey= key+":"+name+":"+index;
+						String metaKey= key+":"+name+":"+num_rows;
+						System.out.println("WRITE:metaKey="+metaKey);
 						if (type == DataTypes.BooleanType) {
 							Boolean bool = row.getBoolean(index);
+							System.out.println("value ="+bool);
 							client.getClient().put(metaKey, new Boolean(bool).toString());
 						}
 						else if (type == DataTypes.ByteType) {
 							Byte byteVal = row.getByte(index);
+							System.out.println("value ="+byteVal);
 							client.getClient().put(metaKey, byteVal.toString());
 						}
 						else if (type == DataTypes.DateType) {
 							Date date = row.getDate(index);
+							System.out.println("value ="+date);
 							client.getClient().put(metaKey, date.toString());
 						}
 						else if (type == DataTypes.StringType) {
 							String val = row.getString(index);
+							System.out.println("value ="+val);
 							client.getClient().put(metaKey, val);
 						}		
 						else if (type == DataTypes.DoubleType) {
 							Double d = row.getDouble(index);
+							System.out.println("value ="+d);
 							client.getClient().put(metaKey, d.toString());
 						}
 						else if (type == DataTypes.FloatType) {
 							Float f = row.getFloat(index);
+							System.out.println("value ="+f);
 							client.getClient().put(metaKey, f.toString());
 						}
 						else if (type == DataTypes.IntegerType) {
 							Integer intVal = row.getInt(index);
+							System.out.println("value ="+intVal);
 							client.getClient().put(metaKey, intVal.toString());
 						}
 						else if (type == DataTypes.LongType) {
 							Long longVal = row.getLong(index);
+							System.out.println("value ="+longVal);
 							client.getClient().put(metaKey, longVal.toString());
 						}
 						else if (type == DataTypes.ShortType) {
 							Short shortVal = row.getShort(index);
+							System.out.println("value ="+shortVal);
 							client.getClient().put(metaKey, shortVal.toString());
 						}
 						else if (type == DataTypes.TimestampType) {
-							Long ts = row.getLong(index);
-							client.getClient().put(metaKey, ts.toString());
+//							Timestamp ts = row.(index);
+//							System.out.println("value ="+ts);
+//							client.getClient().put(metaKey, ts.toString());
 						}
 						else if (type == DataTypes.NullType) {
 							Boolean ts = row.isNullAt(index);
+							System.out.println("value ="+ts);
 							client.getClient().put(metaKey, ts.toString());
 						}
 					}

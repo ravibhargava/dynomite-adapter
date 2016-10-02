@@ -41,7 +41,8 @@ public class DataFrameMetadata {
 	public void setKey(String key) {
 		this.key = key;
 	}
-
+	public DataFrameMetadata () {}
+	
 	public DataFrameMetadata (SerializableWrapper client, String key, List<String> columns, List<String> types, long num_rows) {
 		this.client = client;
 		this.key = key;
@@ -56,9 +57,10 @@ public class DataFrameMetadata {
 		client.getClient().put(metadataKey, jsonString);
 	}
 	
-	public static DataFrameMetadata getMetadata(String key) throws JsonParseException, JsonMappingException, IOException {
+	public DataFrameMetadata getDataFrame(String key) throws JsonParseException, JsonMappingException, IOException {
 		ObjectMapper mapper = new ObjectMapper();
-		DataFrameMetadata dataframe = mapper.readValue(key+":metadata", DataFrameMetadata.class);
+		String metadata = client.getClient().get(key+":metadata");
+		DataFrameMetadata dataframe = mapper.readValue(metadata, DataFrameMetadata.class);
 		return dataframe;
 	}
 }
