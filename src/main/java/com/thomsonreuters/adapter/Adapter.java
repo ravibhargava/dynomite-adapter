@@ -23,7 +23,7 @@ public interface Adapter {
 	 * @return JavaPairRDD<String, String>
 	 */
 	
-	public JavaPairRDD<String, Map<String, String>> fromDynomiteKV(String key);
+	public JavaPairRDD<String,String> fromDynomiteKV(String key);
 
 	/**
 	 * Returns the JavaPairRDD<String, String> with the fields and values of the hashName.

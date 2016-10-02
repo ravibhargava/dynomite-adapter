@@ -61,19 +61,16 @@ public class AdapterImpl implements Serializable, Adapter{
 		return rdd;
 	}
 	
-
-	public JavaPairRDD<String, Map<String, String>> fromDynomiteKV(String key) {
+	public JavaPairRDD<String, String> fromDynomiteKV(String key) {
 		String value = client.getClient().get(key);
-		List<Tuple2<String, Map<String,String>>> tuple = new ArrayList<Tuple2<String, Map<String,String>>>();      
+		List<Tuple2<String, String>> tuple = new ArrayList<Tuple2<String,String>>();      
 		Map<String, String> map = new HashMap<String, String>(); 
 		map.put(key, value);
 		tuple.add(new Tuple2(key,map));
-		JavaPairRDD<String, Map<String,String>> rddpair = sc.parallelizePairs(tuple);
+		JavaPairRDD<String, String> rddpair = sc.parallelizePairs(tuple);
 		return rddpair;
 	}
 	
-
-
 	public JavaPairRDD<String, Map<String,String>> fromDynomiteHash(String key) {
 		DynomiteMap dmap = client.getClient().hash(key);
 		List<Tuple2<String, Map<String,String>>> tuple = new ArrayList<Tuple2<String, Map<String,String>>>();      
@@ -184,7 +181,7 @@ public class AdapterImpl implements Serializable, Adapter{
 			public void call(Iterator<Tuple2<String, String>> iterator) throws Exception {
 				while (iterator.hasNext()){
 					Tuple2<String, String> s = iterator.next();
-					client.getClient().put(s._1, s._2);
+					client.getClient().put(s._1,s._2);
 				}
 		    }});
 	}

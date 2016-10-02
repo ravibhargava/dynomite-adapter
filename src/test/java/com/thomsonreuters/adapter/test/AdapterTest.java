@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.sql.Date;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -19,10 +20,14 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.PairFunction;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import scala.Tuple2;
+import scala.collection.parallel.ParIterableLike.FlatMap;
 
 import com.netflix.config.ConfigurationManager;
 import com.palantir.docker.compose.DockerComposition;
@@ -217,17 +222,32 @@ public class AdapterTest implements Serializable{
 	    w.toDynomiteDataFrame(allTypesDF, key);
 	    DataFrame df = w.fromDynomiteDataFrame(key); 
 	}
-	public JavaRDD<String> testfromDynomiteKey(String key) {return null;}
-	public JavaPairRDD<String, Map<String, String>> testfromDynomiteKV(String key) {return null;}
-	public JavaPairRDD<String, Map<String,String>> testfromDynomiteHash(String key)  {return null;}
+
+	@Test
+	public void testDynomiteKV() {
+		String key = UUID.randomUUID().toString();
+	    AdapterImpl w = new AdapterImpl(sc);
+	    List<Tuple2<String,String>> listR = new ArrayList<Tuple2<String,String>>();
+	    listR.add(new Tuple2<String,String>("a1", "a2"));
+	    JavaPairRDD<String,String> rdd = sc.parallelizePairs(listR);
+	    w.toDynomiteKV(rdd);
+	    JavaPairRDD<String,String> result = w.fromDynomiteKV("a1");
+	}
+	
+	
+	public void testDynomiteHash(String hashname)  {
+		String key = UUID.randomUUID().toString();
+	    AdapterImpl w = new AdapterImpl(sc);
+	    List<Tuple2<String,String>> listR = new ArrayList<Tuple2<String,String>>();
+	    listR.add(new Tuple2<String,String>("a1", "a2"));
+	    JavaPairRDD<String,String> rdd = sc.parallelizePairs(listR);
+	    w.toDynomiteHASH(rdd, hashname);
+	    JavaPairRDD<String, Map<String,String>> result = w.fromDynomiteHash(hashname);
+	}
 	public JavaRDD<String> testfromDynomiteList(final String key) {return null;}
 	public JavaRDD<String> testfromDynomiteSet(String key) {return null;}	
-	public DataFrame testfromDynomiteDataFrame(String key) throws Exception  {return null;}
-	public void testtoDynomiteKV(JavaPairRDD<String, String> stringRDD) {}		
-	public void testtoDynomiteHASH(JavaPairRDD<String, String> hashRDD, final String hashName){}
 	public void testtoDynomiteLIST(JavaRDD<String> listRDD, final String listName) {}
 	public void testtoDynomiteSET(JavaRDD<String> setRDD, final String setName) {}
-	public void testaddlist(final String key, JavaRDD<String> list) {}
 	
 
 }
