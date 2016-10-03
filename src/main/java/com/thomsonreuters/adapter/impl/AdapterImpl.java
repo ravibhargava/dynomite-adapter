@@ -1,17 +1,12 @@
 package com.thomsonreuters.adapter.impl;
 
-import java.io.IOException;
 import java.io.Serializable;
-import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -25,11 +20,10 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.apache.spark.sql.types.UserDefinedType;
 
 import scala.Tuple2;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thomsonreuters.adapter.Adapter;
 import com.thomsonreuters.dynomite.client.DynomiteClient;
@@ -128,39 +122,43 @@ public class AdapterImpl implements Serializable, Adapter{
 			for (int k=0; k<cols.size();k++) {
 				String metaKey = key+":"+cols.get(k)+":"+index; 
 				System.out.println("READ: metaKey="+metaKey+" types="+types.get(k));
-				if (types.get(k).equals(DataTypes.BinaryType.simpleString())) {
+				if (types.get(k).equals(DataTypes.BinaryType)) {
 					dataType = DataTypes.BinaryType;
 				}
-				else if (types.get(k).equals(DataTypes.BooleanType.simpleString())) {
+				else if (types.get(k).equals("BooleanType")) {
 					dataType = DataTypes.BooleanType;
 				}
-				else if (types.get(k).equals(DataTypes.ByteType.simpleString())) {
+				else if (types.get(k).equals("ByteType")) {
 					dataType = DataTypes.ByteType;
 				}
-				else if (types.get(k).equals(DataTypes.DateType.simpleString())) {
+				else if (types.get(k).equals("DateType")) {
 					dataType = DataTypes.DateType;
 				}
-				else if (types.get(k).equals(DataTypes.StringType.simpleString())) {
+				else if (types.get(k).equals("StringType")) {
 					dataType = DataTypes.StringType;
 				}
-				else if (types.get(k).equals(DataTypes.DoubleType.simpleString())) {
+				else if (types.get(k).equals("DoubleType")) {
 					dataType = DataTypes.DoubleType;
 				}
-				else if (types.get(k).equals(DataTypes.FloatType.simpleString())) {
+				else if (types.get(k).equals("FloatType")) {
 					dataType = DataTypes.FloatType;
 				}
-				else if (types.get(k).equals(DataTypes.IntegerType.simpleString())) {
+				else if (types.get(k).equals("IntegerType")) {
 					dataType = DataTypes.IntegerType;
 				}
-				else if (types.get(k).equals(DataTypes.LongType.simpleString())) {
+				else if (types.get(k).equals("LongType")) {
 					dataType = DataTypes.LongType;
 				}
-				else if (types.get(k).equals(DataTypes.ShortType.simpleString())) {
+				else if (types.get(k).equals("ShortType")) {
 					dataType = DataTypes.ShortType;;
 				}
-				else if (types.get(k).equals(DataTypes.TimestampType.simpleString())) {
+				else if (types.get(k).equals("TimestampType")) {
 					dataType = DataTypes.TimestampType;
 					break;
+				}
+				else {
+					String className = client.getClient().get(metaKey+":"+"class");
+					metaKey=metaKey+":"+className;
 				}
 				rows.add(DataTypes.createStructField(cols.get(k), dataType, true));
 				value = client.getClient().get(metaKey);
@@ -195,7 +193,6 @@ public class AdapterImpl implements Serializable, Adapter{
 					map.put(s._1, s._2);
 				}
 		    }});		
-		
 	}
 	
 	public void toDynomiteLIST(JavaRDD<String> listRDD, final String listName) {
@@ -206,7 +203,6 @@ public class AdapterImpl implements Serializable, Adapter{
 				client.getClient().list(listName).add(s);
 			}
 	    }});
-			
 	}
 	
 	public void toDynomiteSET(JavaRDD<String> setRDD, final String setName) {
@@ -217,22 +213,12 @@ public class AdapterImpl implements Serializable, Adapter{
 				client.getClient().list(setName).add(s);
 			}
 	    }});
-
 	}
-	
-	public void addlist(final String key, JavaRDD<String> list){	
-		list.foreachPartition(new VoidFunction<Iterator<String>>(){
-		public void call(Iterator<String> iterator) throws Exception {
-			while (iterator.hasNext()){
-				String s = iterator.next();
-				client.getClient().list(key).add(s);
-			}
-	    }});
-	}
-	
-	
 
 	//ArrayType, BinaryType, BooleanType, DateType, MapType, NullType, NumericType, StringType, StructType, TimestampType, UserDefinedType
+
+	//ArrayType, BinaryType, MapType, NullType, NumericType,  StructType,  UserDefinedType
+
 	public void toDynomiteDataFrame(DataFrame dataframe, final String key) throws Exception {
 		StructType schema= dataframe.schema();
 		final StructField[] fields = schema.fields();
@@ -245,7 +231,7 @@ public class AdapterImpl implements Serializable, Adapter{
 				long num_rows = 0;
 				for (int i=0;i<fields.length;i++) {
 					names.add(fields[i].name());
-					types.add(fields[i].dataType().typeName());	
+					types.add(fields[i].dataType().toString());	
 				}
 				while (iterator.hasNext()){
 					Row row = iterator.next();
@@ -308,6 +294,14 @@ public class AdapterImpl implements Serializable, Adapter{
 							Boolean ts = row.isNullAt(index);
 							System.out.println("value ="+ts);
 							client.getClient().put(metaKey, ts.toString());
+						}
+						else {
+							StructType t1 = (StructType) type;
+							UserDefinedType<?> udf = (UserDefinedType<?>)row.get(index);
+							String json = (String) udf.serialize(udf);
+							String clazz = udf.getClass().getName();
+							client.getClient().put(metaKey+":"+"class", clazz);
+							client.getClient().put(metaKey+":"+clazz, json);
 						}
 					}
 					num_rows++;

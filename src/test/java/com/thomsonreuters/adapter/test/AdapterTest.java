@@ -1,5 +1,6 @@
 package com.thomsonreuters.adapter.test;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.Arrays;
@@ -16,9 +17,11 @@ import org.apache.spark.sql.DataFrame;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SQLContext;
+import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.apache.spark.sql.types.UserDefinedType;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.PairFunction;
 import org.junit.BeforeClass;
@@ -29,9 +32,12 @@ import org.junit.experimental.categories.Category;
 import scala.Tuple2;
 import scala.collection.parallel.ParIterableLike.FlatMap;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.config.ConfigurationManager;
 import com.palantir.docker.compose.DockerComposition;
 import com.thomsonreuters.adapter.impl.AdapterImpl;
+
 
 
 @Category(IntegrationTest.class)
@@ -51,22 +57,22 @@ public class AdapterTest implements Serializable{
 			e.printStackTrace();
 		}
 	}
-	@Test
-	public void testList() {
-		try {
-			final String key = UUID.randomUUID().toString();
-			JavaRDD<String> rdd = sc.parallelize(Arrays.asList("1", "2", "3", "4"));
-			AdapterImpl w = new AdapterImpl(sc);
-			w.addlist(key, rdd);
-			JavaRDD<String> list = w.fromDynomiteList(key);
-			List<String> strings = list.collect();
-			for (String string:strings)
-			System.out.println("**************"+string);
-		}
-		catch (Exception e){
-			e.printStackTrace();
-		}
-	}
+//	@Test
+//	public void testList() {
+//		try {
+//			final String key = UUID.randomUUID().toString();
+//			JavaRDD<String> rdd = sc.parallelize(Arrays.asList("1", "2", "3", "4"));
+//			AdapterImpl w = new AdapterImpl(sc);
+//			w.addlist(key, rdd);
+//			JavaRDD<String> list = w.fromDynomiteList(key);
+//			List<String> strings = list.collect();
+//			for (String string:strings)
+//			System.out.println("**************"+string);
+//		}
+//		catch (Exception e){
+//			e.printStackTrace();
+//		}
+//	}
 	@Test
 	public void testDataFrame() throws Exception {
 		final String key = UUID.randomUUID().toString();
@@ -165,8 +171,8 @@ public class AdapterTest implements Serializable{
 				DataTypes.createStructField("timestamp", DataTypes.TimestampType, true)
 				});
 		final String key = UUID.randomUUID().toString();
-		JavaRDD<String> sample = sc.textFile("src/test/resources/alltypes.csv");
-		JavaRDD<Row> peopleRDD = sample.map(new Function<String, Row>() {
+		JavaRDD<String> sample = sc.parallelize(Arrays.asList(""));
+		JavaRDD<Row> alltypes = sample.map(new Function<String, Row>() {
 				    @Override
 				    public Row call(String line) throws Exception {
 				      AllTypes types = new AllTypes();
@@ -185,7 +191,7 @@ public class AdapterTest implements Serializable{
 				    		  types.getTs());
 				    }
 				  });
-		DataFrame allTypesDF = sqlContext.createDataFrame(peopleRDD, schema);
+		DataFrame allTypesDF = sqlContext.createDataFrame(alltypes, schema);
 	    AdapterImpl w = new AdapterImpl(sc);
 	    w.toDynomiteDataFrame(allTypesDF, key);
 	    DataFrame df = w.fromDynomiteDataFrame(key); 
@@ -234,8 +240,9 @@ public class AdapterTest implements Serializable{
 	    JavaPairRDD<String,String> result = w.fromDynomiteKV("a1");
 	}
 	
-	
-	public void testDynomiteHash(String hashname)  {
+	@Test
+	public void testDynomiteHash()  {
+		String hashname = "hashname";
 		String key = UUID.randomUUID().toString();
 	    AdapterImpl w = new AdapterImpl(sc);
 	    List<Tuple2<String,String>> listR = new ArrayList<Tuple2<String,String>>();
@@ -244,10 +251,65 @@ public class AdapterTest implements Serializable{
 	    w.toDynomiteHASH(rdd, hashname);
 	    JavaPairRDD<String, Map<String,String>> result = w.fromDynomiteHash(hashname);
 	}
-	public JavaRDD<String> testfromDynomiteList(final String key) {return null;}
-	public JavaRDD<String> testfromDynomiteSet(String key) {return null;}	
-	public void testtoDynomiteLIST(JavaRDD<String> listRDD, final String listName) {}
-	public void testtoDynomiteSET(JavaRDD<String> setRDD, final String setName) {}
+	
+	public void testDynomiteList() {
+		String key = UUID.randomUUID().toString();
+	    AdapterImpl w = new AdapterImpl(sc);
+	    JavaRDD<String> listRDD = sc.textFile("src/test/resources/alltypes.csv");
+	    w.toDynomiteLIST(listRDD, key);
+	    JavaRDD<String> result = w.fromDynomiteList(key);
+	}
+	
+	public void testDynomiteSet() {
+		String key = UUID.randomUUID().toString();
+	    AdapterImpl w = new AdapterImpl(sc);
+	    JavaRDD<String> listRDD = sc.textFile("src/test/resources/alltypes.csv");
+	    w.toDynomiteSET(listRDD, key);
+	    JavaRDD<String> result = w.fromDynomiteSet(key);
+	}
 	
 
+	
+	public static void main(String[] args) {
+		Address address = new Address();
+		address.setAddress("567 Main St");
+	}
+	
+
+	@Test
+	public void testUserDefinedType() throws Exception {
+		//First create the address
+		List<StructField> addressFields = new ArrayList<StructField>();
+		addressFields.add(DataTypes.createStructField("street", DataTypes.StringType, true));
+		addressFields.add(DataTypes.createStructField("zip", DataTypes.StringType, true));
+		StructType addressStruct = DataTypes.createStructType(addressFields);
+
+		//Then create the person, using the address struct
+		List<StructField> personFields = new ArrayList<StructField>();
+		personFields.add(DataTypes.createStructField("name", DataTypes.StringType, true));
+		personFields.add(DataTypes.createStructField("age", DataTypes.IntegerType, true));
+		personFields.add(DataTypes.createStructField("address", addressStruct, true));
+
+		StructType schema = DataTypes.createStructType(personFields);
+		JavaRDD<String> sample = sc.parallelize(Arrays.asList(""));
+		final String key = UUID.randomUUID().toString();
+		JavaRDD<Row> person = sample.map(new Function<String, Row>() {
+				    @Override
+				    public Row call(String line) throws Exception {
+				      Person p = new Person();
+				      p.setName("foo");
+				      p.setAge(10);
+				      Address address = new Address();
+				      address.setAddress("123 Main St");
+				      address.setZip("95129");
+				      p.setAddress(address);
+				      return RowFactory.create(p.getName(), p.getAge(), p.getAddress());
+				    }
+				  });
+		DataFrame personDF = sqlContext.createDataFrame(person, schema);
+	    AdapterImpl w = new AdapterImpl(sc);
+	    w.toDynomiteDataFrame(personDF, key);
+	    DataFrame df = w.fromDynomiteDataFrame(key); 
+
+	}
 }
