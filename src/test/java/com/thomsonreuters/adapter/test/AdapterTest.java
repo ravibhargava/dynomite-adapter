@@ -1,11 +1,14 @@
 package com.thomsonreuters.adapter.test;
 
+import static org.junit.Assert.*;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.sql.Date;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -24,13 +27,18 @@ import org.apache.spark.sql.types.StructType;
 import org.apache.spark.sql.types.UserDefinedType;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.PairFunction;
+import org.apache.spark.api.java.function.VoidFunction;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.Assert;
 import org.junit.experimental.categories.Category;
 
+import scala.Function1;
 import scala.Tuple2;
 import scala.collection.parallel.ParIterableLike.FlatMap;
+import scala.runtime.AbstractFunction1;
+import scala.runtime.BoxedUnit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -80,6 +88,13 @@ public class AdapterTest implements Serializable{
 	    AdapterImpl w = new AdapterImpl(sc);
 	    w.toDynomiteDataFrame(dataframe, key);
 	    DataFrame df = w.fromDynomiteDataFrame(key); 
+	    scala.collection.Iterator<Row> iter = df.rdd().toLocalIterator();
+	    while (iter.hasNext()) {
+	    	Row r = iter.next();
+	    	for (int i=0; i< r.size(); i++) {
+	    		System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%"+r.get(i));
+	    	}
+	    }
 	}
 	public class AllTypes {
 
@@ -159,16 +174,16 @@ public class AdapterTest implements Serializable{
 	@Test
 	public void testDataFrame3() throws Exception {
 		StructType schema = DataTypes.createStructType(new StructField[] {
-				DataTypes.createStructField("bool", DataTypes.BooleanType, false),
-				DataTypes.createStructField("byte", DataTypes.ByteType, false),
-				DataTypes.createStructField("date", DataTypes.DateType, true),
-				DataTypes.createStructField("string", DataTypes.StringType, true),
-				DataTypes.createStructField("double", DataTypes.DoubleType, true),
-				DataTypes.createStructField("float", DataTypes.FloatType, true),
-				DataTypes.createStructField("int", DataTypes.IntegerType, true),
-				DataTypes.createStructField("long", DataTypes.LongType, true),
-				DataTypes.createStructField("short", DataTypes.ShortType, true),
-				DataTypes.createStructField("timestamp", DataTypes.TimestampType, true)
+				DataTypes.createStructField("bool1", DataTypes.BooleanType, false),
+				DataTypes.createStructField("byte1", DataTypes.ByteType, false),
+				DataTypes.createStructField("date1", DataTypes.DateType, true),
+				DataTypes.createStructField("string1", DataTypes.StringType, true),
+				DataTypes.createStructField("double1", DataTypes.DoubleType, true),
+				DataTypes.createStructField("float1", DataTypes.FloatType, true),
+				DataTypes.createStructField("int1", DataTypes.IntegerType, true),
+				DataTypes.createStructField("long1", DataTypes.LongType, true),
+				DataTypes.createStructField("short1", DataTypes.ShortType, true),
+				DataTypes.createStructField("timestamp1", DataTypes.TimestampType, true)
 				});
 		final String key = UUID.randomUUID().toString();
 		JavaRDD<String> sample = sc.parallelize(Arrays.asList(""));
@@ -197,52 +212,31 @@ public class AdapterTest implements Serializable{
 	    DataFrame df = w.fromDynomiteDataFrame(key); 
 	}
 
-	@Test
-	public void testDataFrame2() throws Exception {
-		StructType schema = DataTypes.createStructType(new StructField[] {
-				//DataTypes.createStructField("bool", DataTypes.BooleanType, false),
-				DataTypes.createStructField("bool", DataTypes.StringType, false),
-				DataTypes.createStructField("byte", DataTypes.ByteType, false),
-				DataTypes.createStructField("date", DataTypes.DateType, true),
-				DataTypes.createStructField("string", DataTypes.StringType, true),
-				DataTypes.createStructField("double", DataTypes.DoubleType, true),
-				DataTypes.createStructField("float", DataTypes.FloatType, true),
-				DataTypes.createStructField("int", DataTypes.IntegerType, true),
-				DataTypes.createStructField("long", DataTypes.LongType, true),
-				DataTypes.createStructField("short", DataTypes.ShortType, true),
-				DataTypes.createStructField("timestamp", DataTypes.TimestampType, true)
-				});
-		final String key = UUID.randomUUID().toString();
-		JavaRDD<String> sample = sc.textFile("src/test/resources/alltypes.csv");
-		JavaRDD<Row> rowRDD = sample.map(
-				  new Function<String, Row>() {
-				    public Row call(String record) throws Exception {
-				      String[] fields = record.split(",");
-				      for (String field:fields)
-				      System.out.println("field="+field);
-				      return RowFactory.create(fields[0],fields[1],fields[2],fields[3],fields[4],fields[5],fields[6],fields[7],fields[8],fields[9]);
-				    }
-				  });
-		DataFrame allTypesDF = sqlContext.createDataFrame(rowRDD, schema);
-	    AdapterImpl w = new AdapterImpl(sc);
-	    w.toDynomiteDataFrame(allTypesDF, key);
-	    DataFrame df = w.fromDynomiteDataFrame(key); 
-	}
+
 
 	@Test
 	public void testDynomiteKV() {
-		String key = UUID.randomUUID().toString();
-	    AdapterImpl w = new AdapterImpl(sc);
-	    List<Tuple2<String,String>> listR = new ArrayList<Tuple2<String,String>>();
-	    listR.add(new Tuple2<String,String>("a1", "a2"));
-	    JavaPairRDD<String,String> rdd = sc.parallelizePairs(listR);
-	    w.toDynomiteKV(rdd);
-	    JavaPairRDD<String,String> result = w.fromDynomiteKV("a1");
+		final String key = "Heart";
+		AdapterImpl w = new AdapterImpl(sc);
+		List<Tuple2<String, String>> listR = Arrays.asList(
+                new Tuple2<String, String>("Heart", "1"),
+                new Tuple2<String, String>("Diamonds", "2"));
+		JavaPairRDD<String,String> rdd = sc.parallelizePairs(listR);
+		w.toDynomiteKV(rdd);
+		JavaPairRDD<String,String> result = w.fromDynomiteKV(key);
+		result.foreachPartition(new VoidFunction<Iterator<Tuple2<String, String>>>(){
+			public void call(Iterator<Tuple2<String, String>> iterator) throws Exception {
+				while (iterator.hasNext()){
+					Tuple2<String, String> s = iterator.next();
+					Assert.assertTrue(s._1.equals(key));
+					Assert.assertTrue(s._2.equals("1"));
+				}
+			}});	    	
 	}
-	
+
 	@Test
 	public void testDynomiteHash()  {
-		String hashname = "hashname";
+		final String hashname = "hashname";
 		String key = UUID.randomUUID().toString();
 	    AdapterImpl w = new AdapterImpl(sc);
 	    List<Tuple2<String,String>> listR = new ArrayList<Tuple2<String,String>>();
@@ -250,29 +244,45 @@ public class AdapterTest implements Serializable{
 	    JavaPairRDD<String,String> rdd = sc.parallelizePairs(listR);
 	    w.toDynomiteHASH(rdd, hashname);
 	    JavaPairRDD<String, Map<String,String>> result = w.fromDynomiteHash(hashname);
+		result.foreachPartition(new VoidFunction<Iterator<Tuple2<String, Map<String,String>>>>(){
+			public void call(Iterator<Tuple2<String, Map<String,String>>> iterator) throws Exception {
+				while (iterator.hasNext()){
+					Tuple2<String, Map<String,String>> s = iterator.next();
+					Assert.assertTrue(s._1.equals(hashname));
+					Map<String,String> map = s._2;
+					Assert.assertTrue(map.get("a1").equals("a2"));
+				}
+			}});	
 	}
 	
+	String[] lists = {"The dark side of the moon", "Yellow brick road", "The wall"};
+	
+	@Test
 	public void testDynomiteList() {
 		String key = UUID.randomUUID().toString();
 	    AdapterImpl w = new AdapterImpl(sc);
-	    JavaRDD<String> listRDD = sc.textFile("src/test/resources/alltypes.csv");
+	    JavaRDD<String> listRDD = sc.textFile("src/test/resources/list.txt");
 	    w.toDynomiteLIST(listRDD, key);
 	    JavaRDD<String> result = w.fromDynomiteList(key);
+	    JavaRDD<String> list = w.fromDynomiteList(key);
+		List<String> strings = list.collect();
+		for (String string:strings) {
+			if (!(string.trim().equals(lists[0].trim()) || string.trim().equals(lists[1].trim()) || string.trim().equals(lists[2].trim()))){
+				fail();
+			}
+		}	
 	}
-	
+	//@Test iterator not impemented in Dynomite 
 	public void testDynomiteSet() {
 		String key = UUID.randomUUID().toString();
 	    AdapterImpl w = new AdapterImpl(sc);
-	    JavaRDD<String> listRDD = sc.textFile("src/test/resources/alltypes.csv");
+	    JavaRDD<String> listRDD = sc.textFile("src/test/resources/set.txt");
 	    w.toDynomiteSET(listRDD, key);
 	    JavaRDD<String> result = w.fromDynomiteSet(key);
-	}
-	
-
-	
-	public static void main(String[] args) {
-		Address address = new Address();
-		address.setAddress("567 Main St");
+		List<String> strings = result.collect();
+		for (String string:strings) {
+			System.out.println(string);
+		}	
 	}
 	
 
@@ -312,4 +322,39 @@ public class AdapterTest implements Serializable{
 	    DataFrame df = w.fromDynomiteDataFrame(key); 
 
 	}
+
+
+
+	@Test
+	public void testDataFrame2() throws Exception {
+		StructType schema = DataTypes.createStructType(new StructField[] {
+				DataTypes.createStructField("bool", DataTypes.BooleanType, false),
+				DataTypes.createStructField("byte", DataTypes.ByteType, false),
+				DataTypes.createStructField("date", DataTypes.StringType, true),
+				DataTypes.createStructField("string", DataTypes.StringType, true),
+				DataTypes.createStructField("double", DataTypes.DoubleType, true),
+				DataTypes.createStructField("float", DataTypes.FloatType, true),
+				DataTypes.createStructField("int", DataTypes.IntegerType, true),
+				DataTypes.createStructField("long", DataTypes.LongType, true),
+				DataTypes.createStructField("short", DataTypes.ShortType, true),
+				DataTypes.createStructField("timestamp", DataTypes.StringType, true)
+				});
+		final String key = UUID.randomUUID().toString();
+		JavaRDD<String> sample = sc.textFile("src/test/resources/alltypes.csv");
+		JavaRDD<Row> rowRDD = sample.map(
+				  new Function<String, Row>() {
+				    public Row call(String record) throws Exception {
+				      String[] fields = record.split(",");
+				      for (String field:fields)
+				      System.out.println("field="+field);
+				      return RowFactory.create(new Boolean(fields[0]),new Byte(fields[1]),fields[2],fields[3],new Double(fields[4]),new Float(fields[5]),
+				    		  new Integer(fields[6]), new Long(fields[7]), new Short(fields[8]), fields[9]);
+				    }
+				  });
+		DataFrame allTypesDF = sqlContext.createDataFrame(rowRDD, schema);
+	    AdapterImpl w = new AdapterImpl(sc);
+	    w.toDynomiteDataFrame(allTypesDF, key);
+	    DataFrame df = w.fromDynomiteDataFrame(key); 
+	}
+
 }

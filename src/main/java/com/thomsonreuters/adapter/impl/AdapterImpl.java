@@ -2,6 +2,7 @@ package com.thomsonreuters.adapter.impl;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -45,6 +46,7 @@ public class AdapterImpl implements Serializable, Adapter{
 		};
 		this.sc = sc;
 		this.sqlcontext = new SQLContext(this.sc);
+		initHash();
 	}
 	
 	public JavaRDD<String> fromDynomiteKey(String key) {
@@ -57,12 +59,10 @@ public class AdapterImpl implements Serializable, Adapter{
 	
 	public JavaPairRDD<String, String> fromDynomiteKV(String key) {
 		String value = client.getClient().get(key);
-		List<Tuple2<String, String>> tuple = new ArrayList<Tuple2<String,String>>();      
-		Map<String, String> map = new HashMap<String, String>(); 
-		map.put(key, value);
-		tuple.add(new Tuple2(key,map));
-		JavaPairRDD<String, String> rddpair = sc.parallelizePairs(tuple);
-		return rddpair;
+		List<Tuple2<String, String>> listR = Arrays.asList(
+                new Tuple2<String, String>(key, value));
+		JavaPairRDD<String,String> rdd = sc.parallelizePairs(listR);
+		return rdd;
 	}
 	
 	public JavaPairRDD<String, Map<String,String>> fromDynomiteHash(String key) {
@@ -70,8 +70,12 @@ public class AdapterImpl implements Serializable, Adapter{
 		List<Tuple2<String, Map<String,String>>> tuple = new ArrayList<Tuple2<String, Map<String,String>>>();      
 		List<String> list = new ArrayList<String>();
 		Map<String, String> map = new HashMap<String, String>(); 
-		while (dmap.entrySet().iterator().hasNext()) {
-			map.put(dmap.entrySet().iterator().next().getKey(), dmap.entrySet().iterator().next().getValue());
+		Iterator<Map.Entry<String,String>> iter = dmap.entrySet().iterator();
+		while (iter.hasNext()) {
+			Map.Entry<String, String> m =iter.next();
+			String key2 = m.getKey();
+			String val = m.getValue(); 
+			map.put(key2,val);
 		}
 		tuple.add(new Tuple2<String, Map<String,String>>(key,map));
 		JavaPairRDD<String, Map<String,String>> rddpair = sc.parallelizePairs(tuple);
@@ -101,6 +105,22 @@ public class AdapterImpl implements Serializable, Adapter{
 		JavaRDD<String> rddpair = sc.parallelize(jset);
 		return rddpair;
 	}
+	
+	private static Map<String, DataType> dataTypeHash = new HashMap<String, DataType>();
+	
+	private void initHash() {
+		dataTypeHash.put("BinaryType", DataTypes.BinaryType);
+		dataTypeHash.put("BooleanType", DataTypes.BooleanType);
+		dataTypeHash.put("ByteType", DataTypes.ByteType);
+		dataTypeHash.put("DateType", DataTypes.DateType);
+		dataTypeHash.put("StringType", DataTypes.StringType);
+		dataTypeHash.put("DoubleType", DataTypes.DoubleType);
+		dataTypeHash.put("FloatType", DataTypes.FloatType);
+		dataTypeHash.put("IntegerType", DataTypes.IntegerType);
+		dataTypeHash.put("LongType", DataTypes.LongType);
+		dataTypeHash.put("ShortType", DataTypes.ShortType);
+		dataTypeHash.put("TimestampType", DataTypes.TimestampType);	
+	}
 		
 	
 	@Override
@@ -117,50 +137,27 @@ public class AdapterImpl implements Serializable, Adapter{
 		List<Row> table = new ArrayList<Row>();
 		List<String> line = new ArrayList<String>();
 		List<StructField> rows = new ArrayList<StructField>();
+		for (int k=0 ;k <cols.size();k++) {
+			dataType = dataTypeHash.get(types.get(k));
+			rows.add(DataTypes.createStructField(cols.get(k), dataType, true));
+		}
 		for (long i=0;i<num_rows;i++) {
 			int index = (int)i;
 			for (int k=0; k<cols.size();k++) {
 				String metaKey = key+":"+cols.get(k)+":"+index; 
 				System.out.println("READ: metaKey="+metaKey+" types="+types.get(k));
-				if (types.get(k).equals(DataTypes.BinaryType)) {
-					dataType = DataTypes.BinaryType;
-				}
-				else if (types.get(k).equals("BooleanType")) {
-					dataType = DataTypes.BooleanType;
-				}
-				else if (types.get(k).equals("ByteType")) {
-					dataType = DataTypes.ByteType;
-				}
-				else if (types.get(k).equals("DateType")) {
-					dataType = DataTypes.DateType;
-				}
-				else if (types.get(k).equals("StringType")) {
-					dataType = DataTypes.StringType;
-				}
-				else if (types.get(k).equals("DoubleType")) {
-					dataType = DataTypes.DoubleType;
-				}
-				else if (types.get(k).equals("FloatType")) {
-					dataType = DataTypes.FloatType;
-				}
-				else if (types.get(k).equals("IntegerType")) {
-					dataType = DataTypes.IntegerType;
-				}
-				else if (types.get(k).equals("LongType")) {
-					dataType = DataTypes.LongType;
-				}
-				else if (types.get(k).equals("ShortType")) {
-					dataType = DataTypes.ShortType;;
-				}
-				else if (types.get(k).equals("TimestampType")) {
-					dataType = DataTypes.TimestampType;
-					break;
-				}
-				else {
+				dataType = dataTypeHash.get(types.get(k));
+				if (dataType == null) {
 					String className = client.getClient().get(metaKey+":"+"class");
+					String struct = client.getClient().get(metaKey+":"+"struct");
+					String json = client.getClient().get(metaKey+":"+"type");
+					Class clazz = Class.forName(struct);
+					System.out.println("Struct = "+struct);
+					if (clazz.isInstance(new StructType()));
+						dataType = new StructType();
 					metaKey=metaKey+":"+className;
 				}
-				rows.add(DataTypes.createStructField(cols.get(k), dataType, true));
+				//rows.add(DataTypes.createStructField(cols.get(k), dataType, true));
 				value = client.getClient().get(metaKey);
 				System.out.println("from metaKeyvalue ="+value);
 				line.add(value);
@@ -296,12 +293,14 @@ public class AdapterImpl implements Serializable, Adapter{
 							client.getClient().put(metaKey, ts.toString());
 						}
 						else {
-							StructType t1 = (StructType) type;
+							String struct = type.getClass().getName();
 							UserDefinedType<?> udf = (UserDefinedType<?>)row.get(index);
 							String json = (String) udf.serialize(udf);
 							String clazz = udf.getClass().getName();
 							client.getClient().put(metaKey+":"+"class", clazz);
 							client.getClient().put(metaKey+":"+clazz, json);
+							client.getClient().put(metaKey+":"+"struct", struct);
+							client.getClient().put(metaKey+":"+"type", type.json());
 						}
 					}
 					num_rows++;
