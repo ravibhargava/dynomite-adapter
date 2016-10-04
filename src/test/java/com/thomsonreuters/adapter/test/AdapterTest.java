@@ -1,13 +1,12 @@
 package com.thomsonreuters.adapter.test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.fail;
 
-import java.io.IOException;
 import java.io.Serializable;
-import java.sql.Timestamp;
-import java.util.Arrays;
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -16,32 +15,23 @@ import java.util.UUID;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.sql.DataFrame;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SQLContext;
-import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
-import org.apache.spark.sql.types.UserDefinedType;
-import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.PairFunction;
-import org.apache.spark.api.java.function.VoidFunction;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
-import org.junit.Assert;
 import org.junit.experimental.categories.Category;
 
-import scala.Function1;
 import scala.Tuple2;
-import scala.collection.parallel.ParIterableLike.FlatMap;
-import scala.runtime.AbstractFunction1;
-import scala.runtime.BoxedUnit;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.config.ConfigurationManager;
 import com.palantir.docker.compose.DockerComposition;
 import com.thomsonreuters.adapter.impl.AdapterImpl;
@@ -88,13 +78,17 @@ public class AdapterTest implements Serializable{
 	    AdapterImpl w = new AdapterImpl(sc);
 	    w.toDynomiteDataFrame(dataframe, key);
 	    DataFrame df = w.fromDynomiteDataFrame(key); 
+	    printDF(df);
+	}
+	
+	private void printDF(DataFrame df) {
 	    scala.collection.Iterator<Row> iter = df.rdd().toLocalIterator();
 	    while (iter.hasNext()) {
 	    	Row r = iter.next();
 	    	for (int i=0; i< r.size(); i++) {
 	    		System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%"+r.get(i));
 	    	}
-	    }
+	    }		
 	}
 	public class AllTypes {
 
@@ -183,7 +177,7 @@ public class AdapterTest implements Serializable{
 				DataTypes.createStructField("int1", DataTypes.IntegerType, true),
 				DataTypes.createStructField("long1", DataTypes.LongType, true),
 				DataTypes.createStructField("short1", DataTypes.ShortType, true),
-				DataTypes.createStructField("timestamp1", DataTypes.TimestampType, true)
+				//DataTypes.createStructField("timestamp1", DataTypes.TimestampType, true)
 				});
 		final String key = UUID.randomUUID().toString();
 		JavaRDD<String> sample = sc.parallelize(Arrays.asList(""));
@@ -210,6 +204,7 @@ public class AdapterTest implements Serializable{
 	    AdapterImpl w = new AdapterImpl(sc);
 	    w.toDynomiteDataFrame(allTypesDF, key);
 	    DataFrame df = w.fromDynomiteDataFrame(key); 
+	    printDF(df);
 	}
 
 
@@ -355,6 +350,7 @@ public class AdapterTest implements Serializable{
 	    AdapterImpl w = new AdapterImpl(sc);
 	    w.toDynomiteDataFrame(allTypesDF, key);
 	    DataFrame df = w.fromDynomiteDataFrame(key); 
+	    printDF(df);
 	}
 
 }

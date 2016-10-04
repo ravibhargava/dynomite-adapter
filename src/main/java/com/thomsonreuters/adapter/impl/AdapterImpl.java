@@ -49,10 +49,16 @@ public class AdapterImpl implements Serializable, Adapter{
 		initHash();
 	}
 	
-	public JavaRDD<String> fromDynomiteKey(String key) {
+	private List<String> keyHelper(String key) {
 		String value = client.getClient().get(key);
 		List<String> list = new ArrayList<String>();
 		list.add(value);
+		return list;
+	}
+	
+	
+	public JavaRDD<String> fromDynomiteKey(String key) {
+		List<String> list = keyHelper(key);
 		JavaRDD<String> rdd = sc.parallelize(list);
 		return rdd;
 	}
@@ -65,10 +71,8 @@ public class AdapterImpl implements Serializable, Adapter{
 		return rdd;
 	}
 	
-	public JavaPairRDD<String, Map<String,String>> fromDynomiteHash(String key) {
-		DynomiteMap dmap = client.getClient().hash(key);
-		List<Tuple2<String, Map<String,String>>> tuple = new ArrayList<Tuple2<String, Map<String,String>>>();      
-		List<String> list = new ArrayList<String>();
+	private Tuple2<String, Map<String,String>> hashHelper(String k) {
+		DynomiteMap dmap = client.getClient().hash(k);
 		Map<String, String> map = new HashMap<String, String>(); 
 		Iterator<Map.Entry<String,String>> iter = dmap.entrySet().iterator();
 		while (iter.hasNext()) {
@@ -77,35 +81,91 @@ public class AdapterImpl implements Serializable, Adapter{
 			String val = m.getValue(); 
 			map.put(key2,val);
 		}
-		tuple.add(new Tuple2<String, Map<String,String>>(key,map));
+		Tuple2<String, Map<String,String>> t2 = new Tuple2<String, Map<String,String>>(k,map);
+		return t2;
+
+	}
+	
+	public JavaPairRDD<String, Map<String,String>> fromDynomiteHash(String key) {
+		DynomiteMap dmap = client.getClient().hash(key);
+		List<Tuple2<String, Map<String,String>>> tuple = new ArrayList<Tuple2<String, Map<String,String>>>();      
+		Tuple2<String, Map<String,String>> h = hashHelper(key);
+		tuple.add(h);
 		JavaPairRDD<String, Map<String,String>> rddpair = sc.parallelizePairs(tuple);
 		return rddpair;
 	}
 	
-
-	
-	public JavaRDD<String> fromDynomiteList(final String key){	
-		DynomiteList dlist = client.getClient().list(key);
+	private List<String> listHelper(String k) {
+		DynomiteList dlist = client.getClient().list(k);
 		List<String> jlist = new ArrayList<String>();
 		for (int i=0; i<dlist.size();i++) {
 			jlist.add(dlist.get(i));
 		}
+		return jlist;
+	}
+	
+	public JavaRDD<String> fromDynomiteList(final String key){	
+		List<String> jlist = listHelper(key);
 		JavaRDD<String> rdd = sc.parallelize(jlist);
 		return rdd;
 	}
 	
-
-	
-	public JavaRDD<String> fromDynomiteSet(String key) {
+	private List<String> setHelper(String key) {
 		DynomiteSet dset = client.getClient().set(key);
 		List<String> jset = new ArrayList<String>();  
 		while (dset.iterator().hasNext()) {
 			jset.add(dset.iterator().next());
 		}
+		return jset;
+	}
+	
+	public JavaRDD<String> fromDynomiteSet(String key) {
+		List<String> jset = setHelper(key);
 		JavaRDD<String> rddpair = sc.parallelize(jset);
 		return rddpair;
 	}
 	
+	
+	public JavaRDD<List<String>> fromDynomiteList(String key[]) {
+		List<List<String>> list2 = new ArrayList<List<String>>();
+		for (String k:key) {
+			List<String> jset = setHelper(k);
+			list2.add(jset);
+		}
+		JavaRDD<List<String>> rddpair = sc.parallelize(list2);
+		return rddpair;
+	}
+	
+	public JavaPairRDD<String, Map<String,String>> fromDynomiteHash(String[] key) {
+		List<Tuple2<String, Map<String,String>>> tuples = new ArrayList<Tuple2<String, Map<String,String>>>(); 
+		for (String k:key) {
+			Tuple2<String, Map<String,String>> h = hashHelper(k);
+			tuples.add(h);
+		}
+		JavaPairRDD<String, Map<String,String>> rddpair = sc.parallelizePairs(tuples);
+		return rddpair;
+
+	}
+	public JavaPairRDD<String, String> fromDynomiteKV(String[] key) {
+		List<Tuple2<String, String>> listR = new ArrayList<Tuple2<String, String>>();
+		for (String k:key) {
+			String value = client.getClient().get(k);
+			Tuple2<String, String> t = new Tuple2<String, String>(k, value);
+			listR.add(t);
+		}
+		JavaPairRDD<String,String> rdd = sc.parallelizePairs(listR);
+		return rdd;
+	}
+	
+	public JavaRDD<String> fromDynomiteKey(String[] key) {
+		List <String> listR = new ArrayList<String>();
+		for (String k:key) {
+			String value = client.getClient().get(k);
+			listR.add(value);
+		}
+		JavaRDD<String> rdd = sc.parallelize(listR);
+		return rdd;
+	}
 	private static Map<String, DataType> dataTypeHash = new HashMap<String, DataType>();
 	
 	private void initHash() {
@@ -164,6 +224,7 @@ public class AdapterImpl implements Serializable, Adapter{
 			}
 			row = RowFactory.create(line);
 			table.add(row);
+			line = new ArrayList<String>();
 		}
 		StructType schema = DataTypes.createStructType(rows);
 		JavaRDD<Row> rdd = sc.parallelize(table);
@@ -212,10 +273,7 @@ public class AdapterImpl implements Serializable, Adapter{
 	    }});
 	}
 
-	//ArrayType, BinaryType, BooleanType, DateType, MapType, NullType, NumericType, StringType, StructType, TimestampType, UserDefinedType
-
-	//ArrayType, BinaryType, MapType, NullType, NumericType,  StructType,  UserDefinedType
-
+	
 	public void toDynomiteDataFrame(DataFrame dataframe, final String key) throws Exception {
 		StructType schema= dataframe.schema();
 		final StructField[] fields = schema.fields();
@@ -283,9 +341,9 @@ public class AdapterImpl implements Serializable, Adapter{
 							client.getClient().put(metaKey, shortVal.toString());
 						}
 						else if (type == DataTypes.TimestampType) {
-//							Timestamp ts = row.(index);
-//							System.out.println("value ="+ts);
-//							client.getClient().put(metaKey, ts.toString());
+							String ts = row.getString(index);
+							System.out.println("value ="+ts);
+							client.getClient().put(metaKey, ts);
 						}
 						else if (type == DataTypes.NullType) {
 							Boolean ts = row.isNullAt(index);
@@ -359,16 +417,3 @@ public class AdapterImpl implements Serializable, Adapter{
 //	return null;
 //}
 
-//public JavaRDD<String> fromDynomiteList(String key[]) {
-//	return null;
-//}
-//public JavaPairRDD<String, Map<String,String>> fromDynomiteHash(String[] key) {
-//	return null;
-//}
-//public JavaPairRDD<String, String> fromDynomiteKV(String[] key) {
-//	
-//	return null;
-//}
-//public JavaRDD<String> fromDynomiteKey(String[] key) {
-//	return null;
-//}
